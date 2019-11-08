@@ -1,0 +1,15 @@
+version: '2'
+
+networks:
+    internal:
+        driver: bridge
+
+services:
+  default:
+    build: .
+    volumes:
+    - ./:/app
+    networks:
+        internal:
+           aliases:
+             - default
