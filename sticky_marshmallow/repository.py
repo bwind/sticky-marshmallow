@@ -1,6 +1,9 @@
+import inspect
+
 from bson import ObjectId
 
 from marshmallow import fields
+from sticky_marshmallow.connection import get_db
 from sticky_marshmallow.utils.case import snake_case
 
 
@@ -54,8 +57,8 @@ class BaseRepository(type):
 
 
 class Repository(metaclass=BaseRepository):
-    def _get_collection_name(self):
-        return snake_case(self.__class__.__name__.replace("Repository", ""))
+    def _get_db(self):
+        return get_db()
 
     def _get_recursive(self, collection_name, filter):
         document = self.db[collection_name].find_one(filter)
@@ -67,6 +70,10 @@ class Repository(metaclass=BaseRepository):
         for key, value in refs.items():
             setattr(document, key, self._get_recursive(key, {"_id": value}))
 
+    def _meta(self, schema, name):
+        if hasattr(schema, "Meta"):
+            return getattr(schema.Meta, name, None)
+
     def _save_recursive(self, schema, obj):
         document = schema.dump(obj)
         for field_name, field in schema._declared_fields.items():
@@ -76,8 +83,29 @@ class Repository(metaclass=BaseRepository):
                         field.schema, getattr(obj, field_name)
                     )["_id"]
         document["_id"] = ObjectId(document.pop("id"))
-        # todo: save this document
+        result = self.get_collection(schema).update_one(
+            {"_id": document["_id"]}, {"$set": document}, upsert=True
+        )
+        if obj.id is None:
+            if hasattr(result, "upserted_id"):
+                obj.id = str(result.upserted_id)
+            elif hasattr(result, "inserted_id"):
+                obj.id = str(result.inserted_id)
         return document
+
+    def get_collection(self, schema):
+        return self._get_db()[self.get_collection_name(schema)]
+
+    def get_collection_name(self, schema):
+        if self._meta(schema, "collection"):
+            return self._meta("collection")
+        # Allows both the schema class and an instance to be passed
+        if inspect.isclass(schema):
+            cls_name = schema.__name__
+        else:
+            cls_name = schema.__class__.__name__
+        collection_name = snake_case(cls_name.replace("Schema", ""))
+        return collection_name
 
     def to_mongo(self, obj):
         pass
@@ -99,4 +127,4 @@ class Repository(metaclass=BaseRepository):
         pass
 
     def delete_many(self, **filter):
-        pass
+        self.get_collection(self.Meta.schema).delete_many(filter)

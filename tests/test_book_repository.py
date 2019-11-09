@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from marshmallow import fields, Schema
-from sticky_marshmallow import Repository
+from sticky_marshmallow import Repository, connect
 
 
 @dataclass
@@ -31,13 +31,22 @@ class BookSchema(Schema):
 class BookRepository(Repository):
     class Meta:
         schema = BookSchema
+        collection = "my_books"
+
+
+class AuthorRepository(Repository):
+    class Meta:
+        schema = AuthorSchema
 
 
 class TestBookRepository:
     def setup(self):
+        connect(host="db")
         self.repository = BookRepository()
+        self.repository.delete_many()
+        AuthorRepository().delete_many()
 
-    def test_save(self):
+    def test_save_and_get(self):
         book = Book(
             id=None,
             title="Nineteen Eighty-Four",

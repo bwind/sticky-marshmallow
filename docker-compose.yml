@@ -10,6 +10,12 @@ services:
     volumes:
     - ./:/app
     networks:
-        internal:
-           aliases:
-             - default
+      internal:
+        aliases:
+          - default
+  db:
+    image: mongo:4
+    networks:
+      internal:
+        aliases:
+          - db
