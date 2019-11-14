@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from marshmallow import fields, Schema
+from marshmallow import fields, post_load, Schema
 from sticky_marshmallow import Repository, connect
 
 
@@ -21,11 +21,19 @@ class AuthorSchema(Schema):
     id = fields.Str()
     name = fields.Str()
 
+    @post_load
+    def make_object(self, data, **kwargs):
+        return Author(**data)
+
 
 class BookSchema(Schema):
     id = fields.Str()
     title = fields.Str()
     author = fields.Nested(AuthorSchema)
+
+    @post_load
+    def make_object(self, data, **kwargs):
+        return Book(**data)
 
 
 class BookRepository(Repository):
@@ -53,3 +61,6 @@ class TestBookRepository:
             author=Author(id=None, name="George Orwell"),
         )
         self.repository.save(book)
+        book = self.repository.get(book.id)
+        assert isinstance(book, Book)
+        assert isinstance(book.author, Author)

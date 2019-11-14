@@ -23,7 +23,18 @@ class BookRepository(Repository):
 
 ## Database connection
 
-sticky-marshmallow is designed to work with your own pymongo connection strategy. When using your own MongoClient handling, register your database:
+sticky-marshmallow needs to be aware of your database connection. You have two options here:
+
+1. Use sticky-marshmallow's `connect()` pymongo wrapper to connect to a database, which automatically registers the database:
+
+```
+from sticky_marshmallow import connect
+
+db = connect('test', host='localhost')
+```
+Or:
+
+2. Use your own code to connect to a database, then register the database:
 
 ```
 import pymongo

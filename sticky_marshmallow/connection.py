@@ -5,7 +5,7 @@ _connections = {}
 _dbs = {}
 
 
-def connect(host=None, db="test"):
+def connect(db="test", host=None):
     connection = pymongo.MongoClient(host=host)
     register_connection(connection)
     register_db(connection[db])

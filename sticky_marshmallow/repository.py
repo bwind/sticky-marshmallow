@@ -4,6 +4,8 @@ from bson import ObjectId
 
 from marshmallow import fields
 from sticky_marshmallow.connection import get_db
+
+# from sticky_marshmallow.cursor import Cursor
 from sticky_marshmallow.utils.case import snake_case
 
 
@@ -60,15 +62,24 @@ class Repository(metaclass=BaseRepository):
     def _get_db(self):
         return get_db()
 
-    def _get_recursive(self, collection_name, filter):
-        document = self.db[collection_name].find_one(filter)
-        refs = {
-            key: value
-            for key, value in document.items()
-            if isinstance(key, ObjectId)
+    def _get_reference_fields(self, schema):
+        return {
+            field_name: field
+            for field_name, field, in schema._declared_fields.items()
+            if isinstance(field, fields.Nested)
+            and "id" in field.schema._declared_fields
         }
-        for key, value in refs.items():
-            setattr(document, key, self._get_recursive(key, {"_id": value}))
+
+    def _dereference(self, schema, document):
+        for field_name, field in self._get_reference_fields(schema).items():
+            nested_document = self.get_collection(field.schema).find_one(
+                {"_id": ObjectId(document[field_name])}
+            )
+            document[field_name] = self._dereference(
+                field.schema, nested_document
+            )
+        document["id"] = str(document.pop("_id"))
+        return document
 
     def _meta(self, schema, name):
         if hasattr(schema, "Meta"):
@@ -76,12 +87,10 @@ class Repository(metaclass=BaseRepository):
 
     def _save_recursive(self, schema, obj):
         document = schema.dump(obj)
-        for field_name, field in schema._declared_fields.items():
-            if isinstance(field, fields.Nested):
-                if "id" in field.schema._declared_fields:
-                    document[field_name] = self._save_recursive(
-                        field.schema, getattr(obj, field_name)
-                    )["_id"]
+        for field_name, field in self._get_reference_fields(schema).items():
+            document[field_name] = self._save_recursive(
+                field.schema, getattr(obj, field_name)
+            )["_id"]
         document["_id"] = ObjectId(document.pop("id"))
         result = self.get_collection(schema).update_one(
             {"_id": document["_id"]}, {"$set": document}, upsert=True
@@ -110,15 +119,24 @@ class Repository(metaclass=BaseRepository):
     def to_mongo(self, obj):
         pass
 
-    def to_object(self, document):
-        pass
+    def to_object(self, schema, document):
+        return schema.load(document)
 
-    def get(self, **filter):
-        if "id" in filter:
-            filter["_id"] = filter.pop("id")
+    def get(self, id=None, **filter):
+        if id is not None:
+            filter["_id"] = ObjectId(id)
+        schema = self.Meta.schema()
+        pymongo_cursor = self.get_collection(schema).find(filter).limit(2)
+        if pymongo_cursor.count() > 1:
+            raise self.MultipleObjectsReturned()
+        if pymongo_cursor.count() == 0:
+            raise self.DoesNotExist()
+        return self.to_object(
+            schema, self._dereference(schema, pymongo_cursor[0])
+        )
 
-    def find(self, **filter):
-        pass
+    # def find(self, **filter):
+    #     return Cursor(schema=schema, pymongo_cursor=pymongo_cursor)
 
     def save(self, obj):
         self._save_recursive(schema=self.Meta.schema(), obj=obj)
