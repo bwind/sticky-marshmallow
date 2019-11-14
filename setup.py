@@ -38,6 +38,7 @@ setup(
     include_package_data=True,
     description="sticky-marshmallow provides RDMS style persistence for marshmallow schemas",  # noqa: E501
     platforms=["any"],
+    packages=["sticky_marshmallow"],
     classifiers=[],
     install_requires=["marshmallow"],
     cmdclass={"test": Test},
