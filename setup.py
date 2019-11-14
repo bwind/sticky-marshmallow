@@ -1,7 +1,7 @@
 import os
 import sys
 
-from setuptools import setup
+from setuptools import find_packages, setup
 from setuptools.command.test import test as TestCommand
 
 
@@ -38,8 +38,19 @@ setup(
     include_package_data=True,
     description="sticky-marshmallow provides RDMS style persistence for marshmallow schemas",  # noqa: E501
     platforms=["any"],
-    packages=["sticky_marshmallow"],
-    classifiers=[],
+    packages=find_packages(),
+    classifiers=[
+        "Development Status :: 4 - Beta",
+        "Intended Audience :: Developers",
+        "License :: OSI Approved :: MIT License",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Topic :: Database",
+        "Topic :: Software Development :: Libraries :: Python Modules",
+    ],
     install_requires=["marshmallow"],
     cmdclass={"test": Test},
 )
