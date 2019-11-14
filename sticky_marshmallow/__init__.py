@@ -1,5 +1,5 @@
-from sticky_marshmallow.connection import connect  # noqa: F401
-from sticky_marshmallow.repository import Repository  # noqa: F401
+from sticky_marshmallow.connection import *  # noqa: F401,F403
+from sticky_marshmallow.repository import *  # noqa: F401,F403
 
 
 VERSION = (0, 1, 0)

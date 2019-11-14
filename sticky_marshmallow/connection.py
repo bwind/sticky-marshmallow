@@ -1,6 +1,11 @@
 import pymongo
 
 
+__all__ = [
+    "connect",
+    "register_db",
+]
+
 _connections = {}
 _dbs = {}
 

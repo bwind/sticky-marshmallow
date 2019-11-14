@@ -9,6 +9,9 @@ from sticky_marshmallow.connection import get_db
 from sticky_marshmallow.utils.case import snake_case
 
 
+__all__ = ["Repository"]
+
+
 class DoesNotExist(Exception):
     pass
 
