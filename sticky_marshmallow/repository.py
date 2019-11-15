@@ -74,6 +74,8 @@ class Repository(metaclass=BaseRepository):
         }
 
     def _dereference(self, schema, document):
+        if document is None:
+            return
         for field_name, field in self._get_reference_fields(schema).items():
             nested_document = self.get_collection(field.schema).find_one(
                 {"_id": ObjectId(document[field_name])}
@@ -91,9 +93,10 @@ class Repository(metaclass=BaseRepository):
     def _save_recursive(self, schema, obj):
         document = schema.dump(obj)
         for field_name, field in self._get_reference_fields(schema).items():
-            document[field_name] = self._save_recursive(
-                field.schema, getattr(obj, field_name)
-            )["_id"]
+            if getattr(obj, field_name) is not None:
+                document[field_name] = self._save_recursive(
+                    field.schema, getattr(obj, field_name)
+                )["_id"]
         document["_id"] = ObjectId(document.pop("id"))
         result = self.get_collection(schema).update_one(
             {"_id": document["_id"]}, {"$set": document}, upsert=True
