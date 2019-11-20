@@ -43,7 +43,7 @@ class BookSchema(Schema):
 class BookRepository(Repository):
     class Meta:
         schema = BookSchema
-        collection = "my_books"
+        collection = "my_books"  # not implemented yet.
 
 
 class AuthorRepository(Repository):

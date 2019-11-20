@@ -55,3 +55,4 @@ This library is not built with performance in mind.
 
 * Implement Cursor that lazily loads MongoDB documents
 * Implement save() with iterables
+* Use `collection` from Repository.Meta

@@ -7,14 +7,7 @@ from sticky_marshmallow.connection import get_db
 from sticky_marshmallow.utils.case import snake_case
 
 
-def _meta(schema, name):
-    if hasattr(schema, "Meta"):
-        return getattr(schema.Meta, name, None)
-
-
 def _get_collection_name_from_schema(schema):
-    if _meta(schema, "collection"):
-        return _meta("collection")
     # Allows both the schema class and an instance to be passed
     if inspect.isclass(schema):
         cls_name = schema.__name__
