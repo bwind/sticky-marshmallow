@@ -67,7 +67,7 @@ class TestBookRepository:
         assert isinstance(book, Book)
         assert isinstance(book.author, Author)
 
-    def test_none_reference(self):
+    def test_empty_reference(self):
         book = Book(id=None, title="Nineteen Eighty-Four", author=None)
         self.repository.save(book)
-        self.repository.get(book.id)
+        assert self.repository.get(book.id).author is None
