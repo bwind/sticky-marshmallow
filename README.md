@@ -54,3 +54,4 @@ This library is not built with performance in mind.
 # TODO
 
 * Implement Cursor that lazily loads MongoDB documents
+* Implement save() with iterables

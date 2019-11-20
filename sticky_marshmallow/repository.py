@@ -1,12 +1,12 @@
-import inspect
-
 from bson import ObjectId
 
-from marshmallow import fields
-from sticky_marshmallow.connection import get_db
+from sticky_marshmallow.core import (
+    _get_collection_from_schema,
+    _get_reference_fields,
+    _to_object,
+)
 
-# from sticky_marshmallow.cursor import Cursor
-from sticky_marshmallow.utils.case import snake_case
+from sticky_marshmallow.cursor import Cursor
 
 
 __all__ = ["Repository"]
@@ -62,43 +62,15 @@ class BaseRepository(type):
 
 
 class Repository(metaclass=BaseRepository):
-    def _get_db(self):
-        return get_db()
-
-    def _get_reference_fields(self, schema):
-        return {
-            field_name: field
-            for field_name, field, in schema._declared_fields.items()
-            if isinstance(field, fields.Nested)
-            and "id" in field.schema._declared_fields
-        }
-
-    def _dereference(self, schema, document):
-        if document is None:
-            return
-        for field_name, field in self._get_reference_fields(schema).items():
-            nested_document = self.get_collection(field.schema).find_one(
-                {"_id": ObjectId(document[field_name])}
-            )
-            document[field_name] = self._dereference(
-                field.schema, nested_document
-            )
-        document["id"] = str(document.pop("_id"))
-        return document
-
-    def _meta(self, schema, name):
-        if hasattr(schema, "Meta"):
-            return getattr(schema.Meta, name, None)
-
     def _save_recursive(self, schema, obj):
         document = schema.dump(obj)
-        for field_name, field in self._get_reference_fields(schema).items():
+        for field_name, field in _get_reference_fields(schema).items():
             if getattr(obj, field_name) is not None:
                 document[field_name] = self._save_recursive(
                     field.schema, getattr(obj, field_name)
                 )["_id"]
         document["_id"] = ObjectId(document.pop("id"))
-        result = self.get_collection(schema).update_one(
+        result = _get_collection_from_schema(schema).update_one(
             {"_id": document["_id"]}, {"$set": document}, upsert=True
         )
         if obj.id is None:
@@ -108,41 +80,26 @@ class Repository(metaclass=BaseRepository):
                 obj.id = str(result.inserted_id)
         return document
 
-    def get_collection(self, schema):
-        return self._get_db()[self.get_collection_name(schema)]
-
-    def get_collection_name(self, schema):
-        if self._meta(schema, "collection"):
-            return self._meta("collection")
-        # Allows both the schema class and an instance to be passed
-        if inspect.isclass(schema):
-            cls_name = schema.__name__
-        else:
-            cls_name = schema.__class__.__name__
-        collection_name = snake_case(cls_name.replace("Schema", ""))
-        return collection_name
-
     def to_mongo(self, obj):
         pass
-
-    def to_object(self, schema, document):
-        return schema.load(document)
 
     def get(self, id=None, **filter):
         if id is not None:
             filter["_id"] = ObjectId(id)
         schema = self.Meta.schema()
-        pymongo_cursor = self.get_collection(schema).find(filter).limit(2)
-        if pymongo_cursor.count() > 1:
+        collection = _get_collection_from_schema(schema)
+        count = collection.count_documents(filter)
+        if count > 1:
             raise self.MultipleObjectsReturned()
-        if pymongo_cursor.count() == 0:
+        if count == 0:
             raise self.DoesNotExist()
-        return self.to_object(
-            schema, self._dereference(schema, pymongo_cursor[0])
-        )
+        document = collection.find_one(filter)
+        return _to_object(schema, document)
 
-    # def find(self, **filter):
-    #     return Cursor(schema=schema, pymongo_cursor=pymongo_cursor)
+    def find(self, **filter):
+        schema = self.Meta.schema()
+        pymongo_cursor = _get_collection_from_schema(schema).find(filter)
+        return Cursor(schema=schema, pymongo_cursor=pymongo_cursor)
 
     def save(self, obj):
         self._save_recursive(schema=self.Meta.schema(), obj=obj)
@@ -151,4 +108,4 @@ class Repository(metaclass=BaseRepository):
         pass
 
     def delete_many(self, **filter):
-        self.get_collection(self.Meta.schema).delete_many(filter)
+        _get_collection_from_schema(self.Meta.schema).delete_many(filter)

@@ -1,7 +1,9 @@
 from dataclasses import dataclass
 
+import pytest
 from marshmallow import fields, post_load, Schema
 from sticky_marshmallow import Repository
+from sticky_marshmallow.cursor import Cursor
 
 from tests.db import connect
 
@@ -71,3 +73,17 @@ class TestBookRepository:
         book = Book(id=None, title="Nineteen Eighty-Four", author=None)
         self.repository.save(book)
         assert self.repository.get(book.id).author is None
+
+    def test_find_returns_cursor(self):
+        books = [
+            Book(id=None, title="Nineteen Eighty-Four", author=None),
+            Book(id=None, title="The Great Gatsby", author=None),
+        ]
+        for book in books:
+            self.repository.save(book)
+        cursor = self.repository.find()
+        assert isinstance(cursor, Cursor)
+        assert next(cursor).title == "Nineteen Eighty-Four"
+        assert next(cursor).title == "The Great Gatsby"
+        with pytest.raises(StopIteration):
+            next(cursor)
