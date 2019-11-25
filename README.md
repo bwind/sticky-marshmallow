@@ -53,6 +53,9 @@ This library is not built with performance in mind.
 
 # TODO
 
-* Implement Cursor that lazily loads MongoDB documents
-* Implement save() with iterables
+✓ Implement Cursor that lazily loads MongoDB documents
+✓ Implement delete()
+✓ Return object from save()
+* Implement save() with iterables as nested objects
 * Use `collection` from Repository.Meta
+* Prevent infinite loops

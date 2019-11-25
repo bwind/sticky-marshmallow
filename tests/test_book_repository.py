@@ -15,10 +15,17 @@ class Author:
 
 
 @dataclass
+class Review:
+    id: str
+    text: str
+
+
+@dataclass
 class Book:
     id: str
     title: str
     author: Author
+    # reviews: List[Review]
 
 
 class AuthorSchema(Schema):
@@ -30,10 +37,16 @@ class AuthorSchema(Schema):
         return Author(**data)
 
 
+class ReviewSchema(Schema):
+    id = fields.Str()
+    text = fields.Str()
+
+
 class BookSchema(Schema):
     id = fields.Str()
     title = fields.Str()
     author = fields.Nested(AuthorSchema, allow_none=True)
+    # reviews = fields.Nested(ReviewSchema, allow_none=True, many=True)
 
     @post_load
     def make_object(self, data, **kwargs):
@@ -51,12 +64,18 @@ class AuthorRepository(Repository):
         schema = AuthorSchema
 
 
+class ReviewRepository(Repository):
+    class Meta:
+        schema = ReviewSchema
+
+
 class TestBookRepository:
     def setup(self):
         connect()
         self.repository = BookRepository()
         self.repository.delete_many()
         AuthorRepository().delete_many()
+        ReviewRepository().delete_many()
 
     def test_save_and_get(self):
         book = Book(
@@ -68,6 +87,18 @@ class TestBookRepository:
         book = self.repository.get(book.id)
         assert isinstance(book, Book)
         assert isinstance(book.author, Author)
+        # assert all([isinstance(review, Review) for review in book.reviews])
+
+    def test_delete(self):
+        book = Book(
+            id=None,
+            title="Nineteen Eighty-Four",
+            author=Author(id=None, name="George Orwell"),
+        )
+        self.repository.save(book)
+        self.repository.delete(book)
+        with pytest.raises(self.repository.DoesNotExist):
+            self.repository.get(book.id)
 
     def test_empty_reference(self):
         book = Book(id=None, title="Nineteen Eighty-Four", author=None)

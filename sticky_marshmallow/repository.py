@@ -80,9 +80,6 @@ class Repository(metaclass=BaseRepository):
                 obj.id = str(result.inserted_id)
         return document
 
-    def to_mongo(self, obj):
-        pass
-
     def get(self, id=None, **filter):
         if id is not None:
             filter["_id"] = ObjectId(id)
@@ -103,9 +100,12 @@ class Repository(metaclass=BaseRepository):
 
     def save(self, obj):
         self._save_recursive(schema=self.Meta.schema(), obj=obj)
+        return obj
 
     def delete(self, obj):
-        pass
+        _get_collection_from_schema(self.Meta.schema).delete_one(
+            {"_id": ObjectId(obj.id)}
+        )
 
     def delete_many(self, **filter):
         _get_collection_from_schema(self.Meta.schema).delete_many(filter)
