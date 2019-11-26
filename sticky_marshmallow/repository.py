@@ -94,9 +94,7 @@ class Repository(metaclass=BaseRepository):
         return _to_object(schema, document)
 
     def find(self, **filter):
-        schema = self.Meta.schema()
-        pymongo_cursor = _get_collection_from_schema(schema).find(filter)
-        return Cursor(schema=schema, pymongo_cursor=pymongo_cursor)
+        return Cursor(schema=self.Meta.schema(), filter=filter)
 
     def save(self, obj):
         self._save_recursive(schema=self.Meta.schema(), obj=obj)

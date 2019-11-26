@@ -69,13 +69,21 @@ class ReviewRepository(Repository):
         schema = ReviewSchema
 
 
+def _clean():
+    BookRepository().delete_many()
+    AuthorRepository().delete_many()
+    ReviewRepository().delete_many()
+
+
+connect()
+
+
 class TestBookRepository:
     def setup(self):
-        connect()
-        self.repository = BookRepository()
-        self.repository.delete_many()
-        AuthorRepository().delete_many()
-        ReviewRepository().delete_many()
+        _clean()
+
+    def teardown(self):
+        _clean()
 
     def test_save_and_get(self):
         book = Book(
@@ -83,8 +91,9 @@ class TestBookRepository:
             title="Nineteen Eighty-Four",
             author=Author(id=None, name="George Orwell"),
         )
-        self.repository.save(book)
-        book = self.repository.get(book.id)
+        repo = BookRepository()
+        repo.save(book)
+        book = repo.get(book.id)
         assert isinstance(book, Book)
         assert isinstance(book.author, Author)
         # assert all([isinstance(review, Review) for review in book.reviews])
@@ -95,26 +104,45 @@ class TestBookRepository:
             title="Nineteen Eighty-Four",
             author=Author(id=None, name="George Orwell"),
         )
-        self.repository.save(book)
-        self.repository.delete(book)
-        with pytest.raises(self.repository.DoesNotExist):
-            self.repository.get(book.id)
+        repo = BookRepository()
+        repo.save(book)
+        repo.delete(book)
+        with pytest.raises(repo.DoesNotExist):
+            repo.get(book.id)
 
     def test_empty_reference(self):
         book = Book(id=None, title="Nineteen Eighty-Four", author=None)
-        self.repository.save(book)
-        assert self.repository.get(book.id).author is None
+        repo = BookRepository()
+        repo.save(book)
+        assert repo.get(book.id).author is None
 
-    def test_find_returns_cursor(self):
+
+class TestCursor:
+    def setup(self):
+        _clean()
         books = [
             Book(id=None, title="Nineteen Eighty-Four", author=None),
             Book(id=None, title="The Great Gatsby", author=None),
         ]
+        repo = BookRepository()
         for book in books:
-            self.repository.save(book)
-        cursor = self.repository.find()
+            repo.save(book)
+
+    def teardown(self):
+        _clean()
+
+    def test_find_returns_cursor(self):
+        cursor = BookRepository().find()
         assert isinstance(cursor, Cursor)
         assert next(cursor).title == "Nineteen Eighty-Four"
         assert next(cursor).title == "The Great Gatsby"
         with pytest.raises(StopIteration):
             next(cursor)
+
+    def test_count(self):
+        assert BookRepository().find().count() == 2
+
+    def test_magic_methods(self):
+        cursor = BookRepository().find().sort("-title")
+        assert next(cursor).title == "The Great Gatsby"
+        assert next(cursor).title == "Nineteen Eighty-Four"
