@@ -70,7 +70,6 @@ class ReviewRepository(Repository):
 
 
 def _clean():
-    # pass
     BookRepository().delete_many()
     AuthorRepository().delete_many()
     ReviewRepository().delete_many()
