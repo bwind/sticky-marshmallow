@@ -1,10 +1,6 @@
 from bson import ObjectId
 
-from sticky_marshmallow.core import (
-    _get_collection_from_schema,
-    _get_reference_fields,
-    _to_object,
-)
+from sticky_marshmallow.core import Core
 
 from sticky_marshmallow.cursor import Cursor
 
@@ -61,16 +57,16 @@ class BaseRepository(type):
         return new_class
 
 
-class Repository(metaclass=BaseRepository):
+class Repository(Core, metaclass=BaseRepository):
     def _save_recursive(self, schema, obj):
         document = schema.dump(obj)
-        for field_name, field in _get_reference_fields(schema).items():
+        for field_name, field in self._get_reference_fields(schema).items():
             if getattr(obj, field_name) is not None:
                 document[field_name] = self._save_recursive(
                     field.schema, getattr(obj, field_name)
                 )["_id"]
         document["_id"] = ObjectId(document.pop("id"))
-        result = _get_collection_from_schema(schema).update_one(
+        result = self._get_collection_from_schema(schema).update_one(
             {"_id": document["_id"]}, {"$set": document}, upsert=True
         )
         if obj.id is None:
@@ -84,26 +80,28 @@ class Repository(metaclass=BaseRepository):
         if id is not None:
             filter["_id"] = ObjectId(id)
         schema = self.Meta.schema()
-        collection = _get_collection_from_schema(schema)
+        collection = self._get_collection_from_schema(schema)
         count = collection.count_documents(filter)
         if count > 1:
             raise self.MultipleObjectsReturned()
         if count == 0:
             raise self.DoesNotExist()
         document = collection.find_one(filter)
-        return _to_object(schema, document)
+        return self._to_object(schema, document)
 
     def find(self, **filter):
-        return Cursor(schema=self.Meta.schema(), filter=filter)
+        schema = self.Meta.schema()
+        collection = self._get_collection_from_schema(schema)
+        return Cursor(schema=schema, collection=collection, filter=filter)
 
     def save(self, obj):
         self._save_recursive(schema=self.Meta.schema(), obj=obj)
         return obj
 
     def delete(self, obj):
-        _get_collection_from_schema(self.Meta.schema).delete_one(
+        self._get_collection_from_schema(self.Meta.schema).delete_one(
             {"_id": ObjectId(obj.id)}
         )
 
     def delete_many(self, **filter):
-        _get_collection_from_schema(self.Meta.schema).delete_many(filter)
+        self._get_collection_from_schema(self.Meta.schema).delete_many(filter)
