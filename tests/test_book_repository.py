@@ -70,6 +70,7 @@ class ReviewRepository(Repository):
 
 
 def _clean():
+    # pass
     BookRepository().delete_many()
     AuthorRepository().delete_many()
     ReviewRepository().delete_many()
@@ -79,8 +80,8 @@ connect()
 
 
 class TestBookRepository:
-    # def setup(self):
-    #     _clean()
+    def setup(self):
+        _clean()
 
     def teardown(self):
         _clean()
@@ -119,7 +120,7 @@ class TestBookRepository:
 
 class TestCursor:
     def setup(self):
-        # _clean()
+        _clean()
         books = [
             Book(id=None, title="Nineteen Eighty-Four", author=None),
             Book(id=None, title="The Great Gatsby", author=None),

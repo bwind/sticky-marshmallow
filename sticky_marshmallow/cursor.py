@@ -17,7 +17,7 @@ class Cursor:
 
     def __next__(self):
         document = next(self._pymongo_cursor)
-        return Core()._to_object(self._schema, self._collection, document)
+        return Core()._to_object(self._schema, document)
 
     def __getattr__(self, name, *args, **kwargs):
         """

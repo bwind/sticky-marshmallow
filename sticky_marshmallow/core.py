@@ -25,14 +25,15 @@ class Core:
     def _get_collection_from_schema(self, schema):
         return self.get_db()[self._get_collection_name_from_schema(schema)]
 
-    def _dereference(self, schema, collection, document):
+    def _dereference(self, schema, document):
         if document is None:
             return
         for field_name, field in self._get_reference_fields(schema).items():
-            nested_document = collection.find_one(
-                {"_id": ObjectId(document[field_name])}
+            nested_document = self._get_collection_from_schema(field.schema).\
+                find_one({"_id": ObjectId(document[field_name])}
             )
-            document[field_name] = self.dereference(field.schema, nested_document)
+            document[field_name] = self._dereference(field.schema,
+                                                     nested_document)
         document["id"] = str(document.pop("_id"))
         return document
 
@@ -45,5 +46,5 @@ class Core:
             and "id" in field.schema._declared_fields
         }
 
-    def _to_object(self, schema, collection, document):
-        return schema.load(self._dereference(schema, collection, document))
+    def _to_object(self, schema, document):
+        return schema.load(self._dereference(schema, document))
