@@ -1,13 +1,13 @@
 import pymongo
 
-from sticky_marshmallow.core import _get_collection_from_schema, _to_object
+from sticky_marshmallow.core import Core
 
 
 class Cursor:
-    def __init__(self, schema, filter):
+    def __init__(self, schema, collection, filter):
         self._schema = schema
         self._filter = filter
-        self._collection = _get_collection_from_schema(schema)
+        self._collection = collection
         self._pymongo_cursor = self._collection.find(filter)
         self._method_name = None
         self._method_chain = []
@@ -17,7 +17,7 @@ class Cursor:
 
     def __next__(self):
         document = next(self._pymongo_cursor)
-        return _to_object(self._schema, document)
+        return Core()._to_object(self._schema, self._collection, document)
 
     def __getattr__(self, name, *args, **kwargs):
         """
