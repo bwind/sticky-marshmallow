@@ -78,7 +78,7 @@ class Repository(Core, metaclass=BaseRepository):
                     field.schema, getattr(obj, field_name)
                 )["_id"]
         document["_id"] = ObjectId(document.pop("id"))
-        result = self.collection.update_one(
+        result = self._get_collection_from_schema(schema).update_one(
             {"_id": document["_id"]}, {"$set": document}, upsert=True
         )
         if obj.id is None:
