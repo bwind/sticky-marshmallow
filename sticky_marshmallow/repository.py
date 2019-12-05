@@ -58,6 +58,18 @@ class BaseRepository(type):
 
 
 class Repository(Core, metaclass=BaseRepository):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._collection = None
+
+    @property
+    def collection(self):
+        if self._collection is None:
+            schema = self.Meta.schema()
+            self._collection = self._get_collection_from_schema(schema)
+
+        return self._collection
+
     def _save_recursive(self, schema, obj):
         document = schema.dump(obj)
         for field_name, field in self._get_reference_fields(schema).items():
@@ -66,7 +78,7 @@ class Repository(Core, metaclass=BaseRepository):
                     field.schema, getattr(obj, field_name)
                 )["_id"]
         document["_id"] = ObjectId(document.pop("id"))
-        result = self._get_collection_from_schema(schema).update_one(
+        result = self.collection.update_one(
             {"_id": document["_id"]}, {"$set": document}, upsert=True
         )
         if obj.id is None:
@@ -77,31 +89,29 @@ class Repository(Core, metaclass=BaseRepository):
         return document
 
     def get(self, id=None, **filter):
+        schema = self.Meta.schema()
         if id is not None:
             filter["_id"] = ObjectId(id)
-        schema = self.Meta.schema()
-        collection = self._get_collection_from_schema(schema)
-        count = collection.count_documents(filter)
+        count = self.collection.count_documents(filter)
         if count > 1:
             raise self.MultipleObjectsReturned()
         if count == 0:
             raise self.DoesNotExist()
-        document = collection.find_one(filter)
+        document = self.collection.find_one(filter)
         return self._to_object(schema, document)
 
     def find(self, **filter):
         schema = self.Meta.schema()
-        collection = self._get_collection_from_schema(schema)
-        return Cursor(schema=schema, collection=collection, filter=filter)
+        return Cursor(schema=schema, collection=self.collection, filter=filter)
 
     def save(self, obj):
         self._save_recursive(schema=self.Meta.schema(), obj=obj)
         return obj
 
     def delete(self, obj):
-        self._get_collection_from_schema(self.Meta.schema).delete_one(
+        self.collection.delete_one(
             {"_id": ObjectId(obj.id)}
         )
 
     def delete_many(self, **filter):
-        self._get_collection_from_schema(self.Meta.schema).delete_many(filter)
+        self.collection.delete_many(filter)
