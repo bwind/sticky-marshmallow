@@ -1,3 +1,4 @@
+import datetime
 from bson import ObjectId
 
 from sticky_marshmallow.core import Core
@@ -71,7 +72,12 @@ class Repository(Core, metaclass=BaseRepository):
         return self._collection
 
     def _save_recursive(self, schema, obj):
-        document = schema.dump(obj)
+        dates = {
+            k: v
+            for k, v in obj.__dict__.items()
+            if isinstance(v, datetime.datetime)
+        }
+        document = {**schema.dump(obj), **dates}
         for field_name, field in self._get_reference_fields(schema).items():
             if getattr(obj, field_name) is not None:
                 document[field_name] = self._save_recursive(
