@@ -79,10 +79,19 @@ class Repository(Core, metaclass=BaseRepository):
         }
         document = {**schema.dump(obj), **dates}
         for field_name, field in self._get_reference_fields(schema).items():
-            if getattr(obj, field_name) is not None:
-                document[field_name] = self._save_recursive(
-                    field.schema, getattr(obj, field_name)
-                )["_id"]
+            reference_field = getattr(obj, field_name)
+            if reference_field is not None:
+                if isinstance(reference_field, list):
+                    document[field_name] = [
+                        self._save_recursive(
+                            field.schema.__class__(many=False), item
+                        )["_id"]
+                        for item in reference_field
+                    ]
+                else:
+                    document[field_name] = self._save_recursive(
+                        field.schema, reference_field
+                    )["_id"]
         document["_id"] = ObjectId(document.pop("id"))
         result = self._get_collection_from_schema(schema).update_one(
             {"_id": document["_id"]}, {"$set": document}, upsert=True
@@ -115,9 +124,7 @@ class Repository(Core, metaclass=BaseRepository):
         return obj
 
     def delete(self, obj):
-        self.collection.delete_one(
-            {"_id": ObjectId(obj.id)}
-        )
+        self.collection.delete_one({"_id": ObjectId(obj.id)})
 
     def delete_many(self, **filter):
         self.collection.delete_many(filter)

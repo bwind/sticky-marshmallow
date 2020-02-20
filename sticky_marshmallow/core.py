@@ -29,11 +29,24 @@ class Core:
         if document is None:
             return
         for field_name, field in self._get_reference_fields(schema).items():
-            nested_document = self._get_collection_from_schema(field.schema).\
-                find_one({"_id": ObjectId(document[field_name])}
-            )
-            document[field_name] = self._dereference(field.schema,
-                                                     nested_document)
+            if isinstance(document[field_name], list):
+                nested_documents = [
+                    self._get_collection_from_schema(field.schema).find_one(
+                        {"_id": ObjectId(oid)}
+                    )
+                    for oid in document[field_name]
+                ]
+                document[field_name] = [
+                    self._dereference(field.schema, nested_document)
+                    for nested_document in nested_documents
+                ]
+            else:
+                nested_document = self._get_collection_from_schema(
+                    field.schema
+                ).find_one({"_id": ObjectId(document[field_name])})
+                document[field_name] = self._dereference(
+                    field.schema, nested_document
+                )
         document["id"] = str(document.pop("_id"))
         return document
 

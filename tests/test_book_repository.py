@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import List
 
 import pytest
 from marshmallow import fields, post_load, Schema
@@ -17,7 +18,7 @@ class Author:
 @dataclass
 class Review:
     id: str
-    text: str
+    rating: int
 
 
 @dataclass
@@ -25,7 +26,7 @@ class Book:
     id: str
     title: str
     author: Author
-    # reviews: List[Review]
+    reviews: List[Review]
 
 
 class AuthorSchema(Schema):
@@ -39,14 +40,18 @@ class AuthorSchema(Schema):
 
 class ReviewSchema(Schema):
     id = fields.Str()
-    text = fields.Str()
+    rating = fields.Int()
+
+    @post_load
+    def make_object(self, data, **kwargs):
+        return Review(**data)
 
 
 class BookSchema(Schema):
     id = fields.Str()
     title = fields.Str()
     author = fields.Nested(AuthorSchema, allow_none=True)
-    # reviews = fields.Nested(ReviewSchema, allow_none=True, many=True)
+    reviews = fields.Nested(ReviewSchema, allow_none=True, many=True)
 
     @post_load
     def make_object(self, data, **kwargs):
@@ -90,19 +95,21 @@ class TestBookRepository:
             id=None,
             title="Nineteen Eighty-Four",
             author=Author(id=None, name="George Orwell"),
+            reviews=[Review(id=None, rating=5), Review(id=None, rating=4)],
         )
         repo = BookRepository()
         repo.save(book)
         book = repo.get(book.id)
         assert isinstance(book, Book)
         assert isinstance(book.author, Author)
-        # assert all([isinstance(review, Review) for review in book.reviews])
+        assert all([isinstance(review, Review) for review in book.reviews])
 
     def test_delete(self):
         book = Book(
             id=None,
             title="Nineteen Eighty-Four",
             author=Author(id=None, name="George Orwell"),
+            reviews=None,
         )
         repo = BookRepository()
         repo.save(book)
@@ -111,7 +118,9 @@ class TestBookRepository:
             repo.get(book.id)
 
     def test_empty_reference(self):
-        book = Book(id=None, title="Nineteen Eighty-Four", author=None)
+        book = Book(
+            id=None, title="Nineteen Eighty-Four", author=None, reviews=None
+        )
         repo = BookRepository()
         repo.save(book)
         assert repo.get(book.id).author is None
@@ -121,8 +130,13 @@ class TestCursor:
     def setup(self):
         _clean()
         books = [
-            Book(id=None, title="Nineteen Eighty-Four", author=None),
-            Book(id=None, title="The Great Gatsby", author=None),
+            Book(
+                id=None,
+                title="Nineteen Eighty-Four",
+                author=None,
+                reviews=None,
+            ),
+            Book(id=None, title="The Great Gatsby", author=None, reviews=None),
         ]
         repo = BookRepository()
         for book in books:
