@@ -24,8 +24,10 @@ def get_db(alias=DEFAULT_ALIAS):
 
 
 def register_connection(connection, alias=DEFAULT_ALIAS):
-    _connections[alias] = connection
+    if alias not in _connections:
+        _connections[alias] = connection
 
 
 def register_db(db, alias=DEFAULT_ALIAS):
-    _dbs[alias] = db
+    if alias not in _dbs:
+        _dbs[alias] = db

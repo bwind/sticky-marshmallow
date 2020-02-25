@@ -71,6 +71,13 @@ class Repository(Core, metaclass=BaseRepository):
 
         return self._collection
 
+    def _get_primary_key_filter(self, document):
+        primary_key_fields = getattr(self.Meta, "primary_key", ["id"])
+        filter = {k: document[k] for k in primary_key_fields}
+        if "id" in filter:
+            filter["_id"] = ObjectId(filter.pop("id"))
+        return filter
+
     def _save_recursive(self, schema, obj):
         dates = {
             k: v
@@ -92,15 +99,20 @@ class Repository(Core, metaclass=BaseRepository):
                     document[field_name] = self._save_recursive(
                         field.schema, reference_field
                     )["_id"]
-        document["_id"] = ObjectId(document.pop("id", None))
+        filter = self._get_primary_key_filter(document)
         result = self._get_collection_from_schema(schema).update_one(
-            {"_id": document["_id"]}, {"$set": document}, upsert=True
+            filter, {"$set": document}, upsert=True
         )
-        if obj.id is None:
-            if hasattr(result, "upserted_id"):
-                obj.id = str(result.upserted_id)
-            elif hasattr(result, "inserted_id"):
-                obj.id = str(result.inserted_id)
+        obj_id = (
+            result.upserted_id
+            if hasattr(result, "upserted_id")
+            else (
+                result.inserted_id if hasattr(result, "inserted_id") else None
+            )
+        )
+        if hasattr(obj, "id"):
+            obj.id = str(obj_id) if obj_id else None
+        document["_id"] = obj_id
         return document
 
     def get(self, id=None, **filter):
