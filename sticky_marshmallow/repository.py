@@ -92,7 +92,7 @@ class Repository(Core, metaclass=BaseRepository):
                     document[field_name] = self._save_recursive(
                         field.schema, reference_field
                     )["_id"]
-        document["_id"] = ObjectId(document.pop("id"))
+        document["_id"] = ObjectId(document.pop("id", None))
         result = self._get_collection_from_schema(schema).update_one(
             {"_id": document["_id"]}, {"$set": document}, upsert=True
         )
