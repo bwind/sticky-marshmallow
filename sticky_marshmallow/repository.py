@@ -109,7 +109,7 @@ class Repository(Core, metaclass=BaseRepository):
             else (
                 result.inserted_id if hasattr(result, "inserted_id") else None
             )
-        )
+        ) or document.pop("id", None)
         if hasattr(obj, "id"):
             obj.id = str(obj_id) if obj_id else None
         document["_id"] = obj_id
