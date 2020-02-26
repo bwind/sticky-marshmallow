@@ -106,10 +106,12 @@ class Repository(Core, metaclass=BaseRepository):
         obj_id = (
             result.upserted_id
             if hasattr(result, "upserted_id")
-            else (
-                result.inserted_id if hasattr(result, "inserted_id") else None
-            )
-        ) or document.pop("id", None)
+            else result.inserted_id
+            if hasattr(result, "inserted_id")
+            else None
+        )
+        if obj_id is None and document.get("id"):
+            obj_id = ObjectId(document.pop("id"))
         if hasattr(obj, "id"):
             obj.id = str(obj_id) if obj_id else None
         document["_id"] = obj_id
