@@ -47,7 +47,9 @@ class Core:
                 document[field_name] = self._dereference(
                     field.schema, nested_document
                 )
-        document["id"] = str(document.pop("_id"))
+        _id = document.pop("_id")
+        if "id" in schema._declared_fields.keys():
+            document["id"] = str(_id)
         return document
 
     @staticmethod

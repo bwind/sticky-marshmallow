@@ -25,13 +25,34 @@ class FooRepository(Repository):
         primary_key = ["bar", "baz"]
 
 
+@dataclass
+class Bar:
+    id: str
+
+
+class BarSchema(Schema):
+    id = fields.Str()
+
+
+class BarRepository(Repository):
+    class Meta:
+        schema = BarSchema
+
+
 class TestPrimaryKey:
     def setup(self):
         connect()
         FooRepository().delete_many()
+        BarRepository().delete_many()
 
     def teardown(self):
         FooRepository().delete_many()
+        BarRepository().delete_many()
+
+    def test_replaces_id(self):
+        bar = Bar(id=None)
+        BarRepository().save(bar)
+        assert "id" not in BarRepository().collection.find_one().keys()
 
     def test_overwrites_object(self):
         foo = Foo(bar="1", baz="2", qux="3")
