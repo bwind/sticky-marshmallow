@@ -100,8 +100,9 @@ class Repository(Core, metaclass=BaseRepository):
                         field.schema, reference_field
                     )["_id"]
         filter = self._get_primary_key_filter(document)
-        result = self._get_collection_from_schema(schema).update_one(
-            filter, {"$set": document}, upsert=True
+        obj_id_from_document = document.pop("id", None)
+        result = self._get_collection_from_schema(schema).replace_one(
+            filter, document, upsert=True
         )
         obj_id = (
             result.upserted_id
@@ -110,8 +111,8 @@ class Repository(Core, metaclass=BaseRepository):
             if hasattr(result, "inserted_id")
             else None
         )
-        if obj_id is None and document.get("id"):
-            obj_id = ObjectId(document.pop("id"))
+        if obj_id is None and obj_id_from_document is not None:
+            obj_id = ObjectId(obj_id_from_document)
         if hasattr(obj, "id"):
             obj.id = str(obj_id) if obj_id else None
         document["_id"] = obj_id
