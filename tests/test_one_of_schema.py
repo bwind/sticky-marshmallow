@@ -89,3 +89,9 @@ class TestOneOfSchema:
             MasterRepository().collection.find_one()["foos"][0], bson.ObjectId
         )
         assert FooRepository().collection.find_one()
+
+    def test_dereferences(self):
+        a = A(id=None, foo="x", bar="y")
+        master = Master(foos=[a])
+        MasterRepository().save(master)
+        MasterRepository().get()

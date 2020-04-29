@@ -86,7 +86,7 @@ class Repository(Core, metaclass=BaseRepository):
         }
         document = {**schema.dump(obj), **dates}
         for field_name, field in self._get_reference_fields(
-            schema, obj
+            schema, obj=obj
         ).items():
             reference_field = getattr(obj, field_name)
             if reference_field is not None:

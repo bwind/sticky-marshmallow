@@ -29,7 +29,9 @@ class Core:
     def _dereference(self, schema, document):
         if document is None:
             return
-        for field_name, field in self._get_reference_fields(schema).items():
+        for field_name, field in self._get_reference_fields(
+            schema, document=document
+        ).items():
             if isinstance(document[field_name], list):
                 nested_documents = [
                     self._get_collection_from_schema(field.schema).find_one(
@@ -53,24 +55,42 @@ class Core:
             document["id"] = str(_id)
         return document
 
-    @staticmethod
-    def _get_reference_fields(schema, obj=None):
+    def _get_schema_from_nested_field(self, field_name, field, obj=None):
+        reference_schema = field.schema
+        if obj is not None and hasattr(field.schema, "get_obj_type"):
+            nested_objs = getattr(obj, field_name)
+            if nested_objs:
+                if field.schema.many is True:
+                    nested_obj = nested_objs[0]
+                else:
+                    nested_obj = nested_objs
+                reference_schema = field.schema.type_schemas[
+                    field.schema.get_obj_type(nested_obj)
+                ]
+        return reference_schema
+
+    def _get_reference_fields(self, schema, obj=None, document=None):
         reference_fields = {}
         for field_name, field, in schema._declared_fields.items():
             if isinstance(field, fields.Nested):
-                reference_schema = field.schema
-                if obj is not None and hasattr(field.schema, "get_obj_type"):
-                    nested_objs = getattr(obj, field_name)
-                    if nested_objs:
-                        if field.schema.many is True:
-                            nested_obj = nested_objs[0]
-                        else:
-                            nested_obj = nested_objs
-                        reference_schema = field.schema.type_schemas[
-                            field.schema.get_obj_type(nested_obj)
-                        ]
+                reference_schema = self._get_schema_from_nested_field(
+                    field_name, field, obj
+                )
                 if "id" in reference_schema._declared_fields:
                     reference_fields[field_name] = field
+                elif document:
+                    nested_objs = document[field_name]
+                    nested_obj = (
+                        nested_objs[0]
+                        if reference_schema.many is True
+                        else nested_objs
+                    )
+                    if isinstance(nested_obj, ObjectId):
+                        """
+                        When we encounter an ObjectId in a nested document, we
+                        are assuming we are dealing with a dereferenced field.
+                        """
+                        reference_fields[field_name] = field
         return reference_fields
 
     def _to_object(self, schema, document):
