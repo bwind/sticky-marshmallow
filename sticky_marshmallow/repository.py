@@ -85,7 +85,9 @@ class Repository(Core, metaclass=BaseRepository):
             if isinstance(v, datetime.datetime)
         }
         document = {**schema.dump(obj), **dates}
-        for field_name, field in self._get_reference_fields(schema).items():
+        for field_name, field in self._get_reference_fields(
+            schema, obj
+        ).items():
             reference_field = getattr(obj, field_name)
             if reference_field is not None:
                 if isinstance(reference_field, list):

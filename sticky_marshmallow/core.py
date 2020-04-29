@@ -54,13 +54,24 @@ class Core:
         return document
 
     @staticmethod
-    def _get_reference_fields(schema):
-        return {
-            field_name: field
-            for field_name, field, in schema._declared_fields.items()
-            if isinstance(field, fields.Nested)
-            and "id" in field.schema._declared_fields
-        }
+    def _get_reference_fields(schema, obj=None):
+        reference_fields = {}
+        for field_name, field, in schema._declared_fields.items():
+            if isinstance(field, fields.Nested):
+                reference_schema = field.schema
+                if hasattr(field.schema, "get_obj_type"):
+                    nested_objs = getattr(obj, field_name)
+                    if nested_objs:
+                        if field.schema.many is True:
+                            nested_obj = nested_objs[0]
+                        else:
+                            nested_obj = nested_objs
+                        reference_schema = field.schema.type_schemas[
+                            field.schema.get_obj_type(nested_obj)
+                        ]
+                if "id" in reference_schema._declared_fields:
+                    reference_fields[field_name] = field
+        return reference_fields
 
     def _to_object(self, schema, document):
         try:

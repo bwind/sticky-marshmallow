@@ -52,5 +52,6 @@ setup(
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
     install_requires=["marshmallow"],
+    tests_requires=["marshmallow_oneofschema"],
     cmdclass={"test": Test},
 )
