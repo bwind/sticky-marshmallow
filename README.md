@@ -1,6 +1,6 @@
 # sticky-marshmallow
 
-sticky-marshmallow is a Python library that provides mongoDB persistence for marshmallow schema based data. It dereferences nested entities and stores them in their own collections. sticky-marshmallow uses a few practices from DDD (repositories, entities, value objects).
+sticky-marshmallow is a Python library that provides MongoDB persistence for marshmallow schema based data. It dereferences nested entities and stores them in their own collections. sticky-marshmallow uses a few practices from DDD (repositories, entities, value objects).
 
 This project follows the convention-over-configuration philosophy and makes the following assumptions:
 
@@ -44,18 +44,13 @@ db = pymongo.MongoClient(**connection_settings)['test']
 register_db(db)
 ```
 
-## Example
-
-
 ## Notes
 
-This library is not built with performance in mind.
+This library is not built with performance in mind, but does implement a cursor object that lazily loads MongoDB documents.
 
-# TODO
+## TODO
 
-✓ Implement Cursor that lazily loads MongoDB documents
-✓ Implement delete()
-✓ Return object from save()
+* Support marshmallow_oneofschema
 * Implement save() with iterables as nested objects
 * Use `collection` from Repository.Meta
 * Prevent infinite loops
