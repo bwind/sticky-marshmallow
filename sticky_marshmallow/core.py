@@ -59,7 +59,7 @@ class Core:
         for field_name, field, in schema._declared_fields.items():
             if isinstance(field, fields.Nested):
                 reference_schema = field.schema
-                if hasattr(field.schema, "get_obj_type"):
+                if obj is not None and hasattr(field.schema, "get_obj_type"):
                     nested_objs = getattr(obj, field_name)
                     if nested_objs:
                         if field.schema.many is True:
