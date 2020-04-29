@@ -73,7 +73,7 @@ class Repository(Core, metaclass=BaseRepository):
 
     def _get_primary_key_filter(self, document):
         primary_key_fields = getattr(self.Meta, "primary_key", ["id"])
-        filter = {k: document[k] for k in primary_key_fields}
+        filter = {k: document.get(k) for k in primary_key_fields}
         if "id" in filter:
             filter["_id"] = ObjectId(filter.pop("id"))
         return filter

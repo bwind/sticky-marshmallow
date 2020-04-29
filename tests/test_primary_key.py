@@ -39,11 +39,26 @@ class BarRepository(Repository):
         schema = BarSchema
 
 
+@dataclass
+class Baz:
+    foo: str
+
+
+class BazSchema(Schema):
+    foo = fields.Str()
+
+
+class BazRepository(Repository):
+    class Meta:
+        schema = BazSchema
+
+
 class TestPrimaryKey:
     def setup(self):
         connect()
         FooRepository().delete_many()
         BarRepository().delete_many()
+        BazRepository().delete_many()
 
     def teardown(self):
         FooRepository().delete_many()
@@ -69,3 +84,9 @@ class TestPrimaryKey:
         foo.bar = "4"
         FooRepository().save(foo)
         assert FooRepository().find().count() == 2
+
+    def test_no_id(self):
+        baz = Baz(foo="bar")
+        baz = BazRepository().save(baz)
+        print(next(BazRepository().find()))
+        print(baz)

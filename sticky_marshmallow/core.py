@@ -1,5 +1,6 @@
 import inspect
 
+import marshmallow
 from bson import ObjectId
 from marshmallow import fields
 
@@ -47,8 +48,8 @@ class Core:
                 document[field_name] = self._dereference(
                     field.schema, nested_document
                 )
-        _id = document.pop("_id")
-        if "id" in schema._declared_fields.keys():
+        if "_id" in document:
+            _id = document.pop("_id")
             document["id"] = str(_id)
         return document
 
@@ -62,4 +63,17 @@ class Core:
         }
 
     def _to_object(self, schema, document):
-        return schema.load(self._dereference(schema, document))
+        try:
+            return schema.load(self._dereference(schema, document))
+        except marshmallow.exceptions.ValidationError as exc:
+            """
+            An ugly hack to support marshmallow_oneofschema.
+
+            When provided with a master schema, we don't have the
+            _declared_fields of the subschemas. Here we delete the 'id' value
+            from the document and try again.
+            """
+            if exc.messages == {"id": ["Unknown field."]} and "id" in document:
+                document.pop("id")
+                return schema.load(self._dereference(schema, document))
+            raise exc
