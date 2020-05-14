@@ -1,5 +1,4 @@
 import pymongo
-
 from sticky_marshmallow.core import Core
 
 
@@ -24,7 +23,7 @@ class Cursor:
         Guido is not a fan of method chaining:
         https://mail.python.org/pipermail/python-dev/2003-October/038855.html
         """
-        if name in ("find", "limit", "skip", "sort"):
+        if name in ("close", "find", "limit", "skip", "sort"):
             self._method_name = name
             return self
         raise AttributeError(
